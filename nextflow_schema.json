@@ -1,0 +1,73 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://raw.githubusercontent.com/sanger_targseq//nextflow_schema.json",
+    "title": "sanger_targseq pipeline parameters",
+    "description": "Pipeline for generating consensus sequence, typing and BLAST search for Sanager sequencing data",
+    "type": "object",
+    "$defs": {
+        "input_output_options": {
+            "title": "Input/output options",
+            "type": "object",
+            "fa_icon": "fas fa-terminal",
+            "description": "Define where the pipeline should find input data and save output data.",
+            "properties": {
+                "input": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "exists": true,
+                    "schema": "assets/schema_input.json",
+                    "mimetype": "text/csv",
+                    "description": "Path to input directory containing sub-directories with .ab1 trace files.",
+                    "help_text": "input directory containing sub-directories with .ab1 trace files",
+                    "fa_icon": "fas fa-folder",
+                    "default": "filepath"
+                },
+                "out_dir": {
+                    "type": "string",
+                    "default": "output",
+                    "hidden": true,
+                    "fa_icon": "fas fa-folder"
+                }
+            },
+            "required": [
+                "input"
+            ]
+        },
+        "optional": {
+            "title": "Optional",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "blastdb_name": {
+                    "type": "string",
+                    "default": "nt.000",
+                    "description": "Name of the blast database",
+                    "fa_icon": "fas fa-server"
+                },
+                "blastdb_path": {
+                    "type": "string",
+                    "default": "/data/referenceDB/blast/nt.000",
+                    "format": "directory-path",
+                    "description": "Path to a blast database",
+                    "fa_icon": "fas fa-font"
+                },
+                "kraken_db": {
+                    "type": "string",
+                    "default": "/data/referenceDB/kraken/k2_pluspf_08gb_20230605",
+                    "format": "directory-path",
+                    "description": "Path to a kraken2 database",
+                    "fa_icon": "fas fa-database"
+                }
+            }
+        }
+    },
+    "allOf": [
+        {
+            "$ref": "#/$defs/input_output_options"
+        },
+        {
+            "$ref": "#/$defs/optional"
+        }
+    ]
+}
