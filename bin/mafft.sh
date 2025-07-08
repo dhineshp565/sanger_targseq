@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 # This script runs MAFFT on a given input file and outputs the result to a specified output file.
 # list of viruses to process
 # $1 = path to the directory containing reference sequences
