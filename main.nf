@@ -61,6 +61,7 @@ process tracy_assembly {
 
 	"""
 }
+// process the forward and reverse reads from sanger sequencing
 process sanger_reads {
     publishDir "${params.out_dir}/sanger_reads/", mode: "copy"
     label "low"
@@ -121,8 +122,7 @@ process make_report {
 
 	"""
 }
-// performs remote blast of the consensus sequences
-
+// performs blast of the consensus sequences
 process blast_cons {
 	publishDir "${params.out_dir}/blast/",mode:"copy"
 	containerOptions "-v ${params.blastdb_path}:${params.blastdb_path}"
@@ -237,6 +237,75 @@ process make_LIMSfile {
 	"""
 }
 
+process mafft {
+    publishDir "${params.out_dir}/mafft/", mode: "copy"
+    label "low"
+
+    input:
+    path (consensus)
+    path (reference_sequences)
+
+    output:
+    path "*_msa.fasta"
+
+    script:
+    """
+	mafft.sh ${reference_sequences}
+    """
+}
+
+process iqtree {
+	publishDir "${params.out_dir}/iqtree/", mode: "copy"
+	label "low"
+
+	input:
+	path (msa)
+
+	output:
+	path "*.treefile"
+
+	script:
+	"""
+    for file in ${msa};do
+
+		prefix=\$(basename "\${file}" .fasta)
+
+		if [ "\$prefix" = "no_msa" ]; then
+			echo "no virus sequences found for this sample, skipping IQ-TREE analysis" > "\${prefix}.treefile"
+		else
+			iqtree2 -s "\${file}" -m MFP -bb 1000 -nt AUTO -pre "\${prefix}_iqtree"
+		fi
+	done
+    """
+
+}
+
+process ggtree {
+    publishDir "${params.out_dir}/ggtree/", mode: "copy"
+    label "low"
+
+    input:
+    path (treefiles)
+
+    output:
+    path "*.png"
+
+    script:
+    """
+	for treefile in ${treefiles}; do
+    filename=\$(basename "\$treefile")
+		if [[ "\$filename" != *no_msa* ]]; then
+			plot_tree.R "\$treefile"
+		else 
+			echo "no virus sequences found for this sample, skipping ggtree analysis" > "\$filename.png"
+		fi
+	done
+    """
+}
+
+
+
+
 workflow {
 	data=Channel
 	.fromPath(params.input)
@@ -255,11 +324,15 @@ workflow {
 	if (params.kraken_db){
 		kraken2(tracy_assembly.out.consensus,params.kraken_db)
 	}
+
 	rmd_file=file("${baseDir}/targseq.Rmd")
 
 	if (params.blastdb_name) {
 		make_report(make_csv.out,tracy_assembly.out.cons_only.collect(),abricate.out.abricate.collect(),blast_cons.out.blast_formatted.collect(),sanger_reads.out.blast_reads.collect(),rmd_file)
 	}
-	
+	refdir="${baseDir}/reference_sequences"
+	mafft(tracy_assembly.out.cons_only.collect(),refdir)
+	iqtree(mafft.out.collect())
+	ggtree(iqtree.out.collect())
 }
 
