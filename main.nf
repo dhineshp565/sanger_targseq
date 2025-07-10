@@ -28,10 +28,9 @@ process tracy_assembly {
 	input:
 	tuple val(SampleName),path(SamplePath)
 	output:
-	tuple val(SampleName),path("${SampleName}_consensus.fasta"), emit:consensus
-	path("${SampleName}_consensus.fasta"), emit:cons_only
-	path("${SampleName}_log.txt"), emit:tracy_log
+	tuple val(SampleName),path("${SampleName}_consR.fasta"), emit:consR
 	path ("${SampleName}_alignment.fasta"), emit:alignment
+	path("${SampleName}_log.txt"), emit:tracy_log
 	
 	
 	script:
@@ -43,14 +42,14 @@ process tracy_assembly {
 
         if [ \$exit_code -eq 255 ]; then
             echo "tracy assemble failed with exit code 255" >> ${SampleName}_log.txt
-            echo ">${SampleName}_consensus" > ${SampleName}_consensus.fasta
-            echo "noconsensus" >> ${SampleName}_consensus.fasta
+            echo ">${SampleName}_consensus" > ${SampleName}_consR.fasta
+            echo "noconsensus" >> ${SampleName}_consR.fasta
 			echo ">${SampleName}_Noalignment" > ${SampleName}_alignment.fasta
 			
 	
         else
-            mv *cons.fa ${SampleName}_consensus.fasta
-            sed -i 's/Consensus/${SampleName}_consensus/g' ${SampleName}_consensus.fasta
+            mv *cons.fa ${SampleName}_consR.fasta
+            sed -i 's/Consensus/${SampleName}_consensus/g' ${SampleName}_consR.fasta
             mv *align.fa ${SampleName}_alignment.fasta
 			
         fi
@@ -60,6 +59,28 @@ process tracy_assembly {
 
 
 	"""
+}
+// Process to get the reverse complement of the consensus sequence
+process reverse_complement {
+	label "low"
+	publishDir "${params.out_dir}/reverse_complement/", mode: "copy"
+	input:
+	tuple val(SampleName), path(consensus)
+	output:
+	tuple val(SampleName),path("${SampleName}_consensus.fasta"), emit:consensus
+	path("${SampleName}_consensus.fasta"), emit:cons_only
+
+	script:
+	"""
+	if grep -q "noconsensus" ${consensus}; then
+		cat ${consensus} > ${SampleName}_consensus.fasta
+	else
+		# Use seqtk to get the reverse complement of the consensus sequence
+		seqtk seq -r ${consensus} > ${SampleName}_consensus.fasta
+	fi
+	
+	"""
+
 }
 // process the forward and reverse reads from sanger sequencing
 process sanger_reads {
@@ -109,6 +130,7 @@ process make_report {
 	path(abricate)
 	path(blast_formatted)
 	path (blast_reads)
+	path(png)
 	path(rmdfile)
 	output:
 	path("sanger_targseq*.html")
@@ -117,8 +139,9 @@ process make_report {
 	
 	cp ${csv} samples.csv
 	cp ${rmdfile} report.Rmd
+	cp ${png} tree.png
 	
-	Rscript -e 'rmarkdown::render(input="report.Rmd", params=list(csv="samples.csv"), output_file = paste0("sanger_targseq_results_report_", Sys.Date(), "_", format(Sys.time(), "%H-%M-%S"), ".html"))'
+	Rscript -e 'rmarkdown::render(input="report.Rmd", params=list(csv="samples.csv",png="tree.png"), output_file = paste0("sanger_targseq_results_report_", Sys.Date(), "_", format(Sys.time(), "%H-%M-%S"), ".html"))'
 
 	"""
 }
@@ -288,7 +311,10 @@ process ggtree {
     path (treefiles)
 
     output:
-    path "*.png"
+    path "*iqtree.png",emit:png
+	
+
+	when:
 
     script:
     """
@@ -314,25 +340,27 @@ workflow {
 	sanger_reads(make_csv.out.splitCsv(header:true).map{row-> tuple(row.SampleName,row.SamplePath)},params.blastdb_path,params.blastdb_name)
 	dbdir=file("${baseDir}/targseq")
 	
+	reverse_complement(tracy_assembly.out.consR)
 	
-	abricate(tracy_assembly.out.consensus,dbdir)
+	abricate(reverse_complement.out.consensus,dbdir)
 	make_LIMSfile(abricate.out.withseq.collect(),software_version_file)
 	//taxon=("${baseDir}/taxdb")
-	blast_cons(tracy_assembly.out.consensus,params.blastdb_path,params.blastdb_name)
+	blast_cons(reverse_complement.out.consensus,params.blastdb_path,params.blastdb_name)
 	//orfipy(medaka.out.consensus)
 	//generate 
 	if (params.kraken_db){
-		kraken2(tracy_assembly.out.consensus,params.kraken_db)
+		kraken2(reverse_complement.out.consensus,params.kraken_db)
 	}
 
 	rmd_file=file("${baseDir}/targseq.Rmd")
 
-	if (params.blastdb_name) {
-		make_report(make_csv.out,tracy_assembly.out.cons_only.collect(),abricate.out.abricate.collect(),blast_cons.out.blast_formatted.collect(),sanger_reads.out.blast_reads.collect(),rmd_file)
-	}
+	
 	refdir="${baseDir}/reference_sequences"
-	mafft(tracy_assembly.out.cons_only.collect(),refdir)
+	mafft(reverse_complement.out.cons_only.collect(),refdir)
 	iqtree(mafft.out.collect())
 	ggtree(iqtree.out.collect())
+	if (params.blastdb_name) {
+		make_report(make_csv.out,reverse_complement.out.cons_only.collect(),abricate.out.abricate.collect(),blast_cons.out.blast_formatted.collect(),sanger_reads.out.blast_reads.collect(),ggtree.out.png,rmd_file)
+	}
 }
 

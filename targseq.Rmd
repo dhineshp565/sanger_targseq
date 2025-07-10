@@ -5,6 +5,7 @@ date: "`r Sys.Date()`"
 output: html_document
 params:
   csv: ""
+  png: ""
 ---
 
 ```{r setup, include=FALSE}
@@ -72,12 +73,16 @@ for (i in sampleid){
   # display blast results
  cat('\n\n<!-- -->\n\n')
 
-
-  
    
   }
-
 ```
+### Phylogenetic tree
+Multiple sequence alignment and phylogenetic tree generation using [MAFFT](https://mafft.cbrc.jp/alignment/server/index.html) and [IQ-Tree2](http://www.iqtree.org/). Visualization using [ggtree](https://guangchuangyu.github.io/software/ggtree/)
+```{r,echo=FALSE}
+knitr::include_graphics(params$png)
+```
+
+
 <br>
 
 
