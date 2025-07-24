@@ -41,13 +41,13 @@
             "properties": {
                 "blastdb_name": {
                     "type": "string",
-                    "default": "nt.000",
+                    "default": "microbe_db",
                     "description": "Name of the blast database",
                     "fa_icon": "fas fa-server"
                 },
                 "blastdb_path": {
                     "type": "string",
-                    "default": "/data/referenceDB/blast/nt.000",
+                    "default": "/data/referenceDB/blast/microbe_db",
                     "format": "directory-path",
                     "description": "Path to a blast database",
                     "fa_icon": "fas fa-font"
