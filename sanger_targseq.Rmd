@@ -13,6 +13,7 @@ library(knitr)
 library(ggplot2)
 library(htmltools)
 library(base64enc)
+library(dplyr)
 ```
 
 

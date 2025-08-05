@@ -5,6 +5,7 @@ date: "`r Sys.Date()`"
 output: html_document
 params:
   csv: ""
+  png: ""
   
 ---
 
@@ -28,7 +29,7 @@ library(dplyr)
 ### Click dropdown to select sample {.tabset .tabset-dropdown}
 ```{r, results='asis',echo=FALSE}
 
-samplelist <- read.csv(params$csv,header=FALSE,sep = ',')[-1,]
+samplelist <- read.csv(params$csv,header=FALSE,sep = ',')
 sampleid <- samplelist[,c(1)]
 
 for (i in sampleid){
