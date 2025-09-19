@@ -24,6 +24,12 @@ library(dplyr)
     color: darkblue;
     font-weight: bold;
 }
+hr {
+  border: none;           
+  height: 4px;            
+  background-color: darkblue;  
+  margin: 20px 0;         
+}
 ```
 
 
@@ -36,13 +42,16 @@ for (i in sampleid){
   cat("### **", i, "**\n")
   #use mappedreads.txt and display column 1 and 3
   
-  # display abricate results
+# display abricate results
   abricate_ids <- (paste(i,"_abricate.csv",sep=""))
   abricate_raw <- read.csv(abricate_ids,header = TRUE,sep = "\t")
-  abricate_final <- abricate_raw[,c(2,6,10,11,12,15)]
-  colnames(abricate_final) <- c("SEQUENCE","GENE","%COVERAGE","%IDENTITY","DATABASE","REFERENCE") 
-  print(knitr::kable(abricate_final,align = "llcccl",caption = "Consensus compared to reference database. Generated using [abricate](https://github.com/tseemann/abricate) and custom database")) 
-  
+  abricate_final <- abricate_raw[,c(2,6,10,11,15)]
+  colnames(abricate_final) <- c("SEQUENCE","GENE","%COVERAGE","%IDENTITY","TYPING RESULT") 
+  results_only <- abricate_raw[,c(2,10,11,15)]
+  colnames(results_only) <- c("SEQUENCE","%COVERAGE","%IDENTITY","TYPING RESULT") 
+  print(knitr::kable(results_only,align = "llll",caption = "Consensus compared to curated reference database. Generated using [abricate](https://github.com/tseemann/abricate) and custom database")) 
+   
+   
    cat('\n\n<!-- -->\n\n')
 
   
@@ -110,7 +119,8 @@ for (i in sampleid){
     }
 
   # display blast results
- cat('\n\n<!-- -->\n\n')
+   cat('\n\n<!-- -->\n\n')
+   cat('<hr>\n')
 
    
   }

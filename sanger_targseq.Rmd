@@ -59,7 +59,28 @@ for (i in sampleid){
   file_name <- gsub("_+", "_", basename(fasta_id))
   # Provide a download link for the encoded FASTA content with file name
   cat('<a href="data:text/plain;charset=utf-8;base64,', encoded_content, '" download="', file_name, '">Download FASTA file</a>')
+
+  cat('\n\n<!-- -->\n\n')
+  orf_id <- (paste(i,"_ORF.fasta",sep=""))
+  orf_file <- readLines(orf_id)
+  # Display the content
+  cat("```\n")
+  cat(orf_file, sep = "\n")
+  cat("\n```\n")
+  # Encode the file content as base64
+  encoded_content <- base64encode(charToRaw(paste(orf_file, collapse = "\n")))
+  # Get file name from file path and remove extra underscores
+  file_name <- gsub("_+", "_", basename(orf_id))
+  # Provide a download link for the encoded FASTA content with file name
+  cat('<a href="data:text/plain;charset=utf-8;base64,', encoded_content, '" download="', file_name, '">Download ORF file</a>')
   
+  cat('\n\n<!-- -->\n\n')
+  # print orf length
+  seqlen_id <- (paste(i,"_seqlengths.tsv",sep=""))
+  seqlen_raw <- read.csv(seqlen_id, sep="\t", header=FALSE)
+  colnames(seqlen_raw) <- c("SEQUENCE_NAME", "LENGTH")
+  print(knitr::kable(seqlen_raw, align="ll", caption = "Sequence name and length"))
+
   cat('\n\n<!-- -->\n\n')
 
   # display blast results

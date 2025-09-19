@@ -7,6 +7,7 @@ nextflow.enable.dsl=2
 
 process make_csv {
 	publishDir "${params.out_dir}"
+	label "low"
 	input:
 	path(fastq_input)
 	output:
@@ -89,7 +90,7 @@ process reverse_complement {
 // process the forward and reverse reads from sanger sequencing
 process sanger_reads {
     publishDir "${params.out_dir}/sanger_reads/", mode: "copy"
-    label "low"
+    label "medium"
 	containerOptions "-v ${params.blastdb_path}:${params.blastdb_path}"
     input:
     tuple val(SampleName), path(SamplePath)
@@ -129,7 +130,7 @@ process sanger_reads {
 process make_report {
 	publishDir "${params.out_dir}/",mode:"copy"
 	
-	label "low"
+	label "medium"
 	input:
 	path(csv)
 	path(cons_only)
@@ -138,6 +139,8 @@ process make_report {
 	path(png)
 	path(rmdfile)
 	path(rmdfile_case)
+	path(seq_length)
+	path (orf)
 	output:
 	path("*.html")
 	script:
@@ -225,12 +228,13 @@ process orfipy {
 	label "low"
 	publishDir "${params.out_dir}/orf",mode:"copy"
 	input:
-	tuple val(SampleName),path("${SampleName}_consensus.fasta")
+	tuple val(SampleName),path(fasta)
 	output:
-	path ("${SampleName}_ORF.fasta")
+	tuple val(SampleName),path ("${SampleName}_ORF.fasta"),emit:orf
+	path("${SampleName}_ORF.fasta"),emit:orf_only
 	script:
 	"""
-	orfy.sh ${SampleName} ${SampleName}_consensus.fasta
+	orfy.sh ${SampleName} ${fasta}
 
 	"""
 
@@ -350,6 +354,26 @@ process ggtree {
     """
 }
 
+process seq_length {
+	label 'low'
+	publishDir "${params.out_dir}/seqlengths/", mode: "copy"
+	input:
+	tuple val(SampleName), path(cons), path(orf)
+
+	output:
+	path("*.tsv")
+
+	script:
+
+	"""
+	cat ${cons} ${SampleName}_ORF.fasta | seqkit fx2tab -n -l > ${SampleName}_seqlengths.tsv
+
+	"""
+
+
+}
+
+
 
 
 
@@ -367,11 +391,17 @@ workflow {
 	make_LIMSfile(abricate.out.withseq.collect(),software_version_file)
 	//taxon=("${baseDir}/taxdb")
 	blast_cons(reverse_complement.out.consensus,params.blastdb_path,params.blastdb_name)
-	//orfipy(medaka.out.consensus)
+	orfipy(reverse_complement.out.consensus)
 	//generate 
 	//if (params.kraken_db){
 		//kraken2(reverse_complement.out.consensus,params.kraken_db)
 	//}
+
+		// Pair consensus and ORF files by sample name
+	paired_consensus_orf = reverse_complement.out.consensus.join(orfipy.out.orf)
+    .map { sample, consensus, orf -> tuple(sample, consensus, orf) }
+	seq_length(paired_consensus_orf)
+	
 
 	rmd_file=file("${baseDir}/sanger_targseq.Rmd")
 	rmd_file_case=file("${baseDir}/sanger_targseq_case.Rmd")
@@ -381,8 +411,7 @@ workflow {
 	mafft(make_csv.out,reverse_complement.out.cons_only.collect(),refdir)
 	iqtree(mafft.out.collect())
 	ggtree(iqtree.out.collect())
-	if (params.blastdb_name) {
-		make_report(make_csv.out,reverse_complement.out.cons_only.collect(),abricate.out.abricate.collect(),blast_cons.out.blast_formatted.collect(),ggtree.out.png,rmd_file,rmd_file_case)
-	}
+	make_report(make_csv.out,reverse_complement.out.cons_only.collect(),abricate.out.abricate.collect(),blast_cons.out.blast_formatted.collect(),ggtree.out.png,rmd_file,rmd_file_case,seq_length.out.collect(),orfipy.out.orf_only.collect())
+	
 }
 
