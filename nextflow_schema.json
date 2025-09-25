@@ -2,7 +2,7 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://raw.githubusercontent.com/sanger_targseq//nextflow_schema.json",
     "title": "sanger_targseq pipeline parameters",
-    "description": "Pipeline for generating consensus sequence, typing and BLAST search for Sanager sequencing data",
+    "description": "Pipeline for generating consensus sequence, typing and BLAST search for Sanger sequencing data",
     "type": "object",
     "$defs": {
         "input_output_options": {
@@ -42,23 +42,17 @@
                 "blastdb_name": {
                     "type": "string",
                     "default": "microbe_db",
-                    "description": "Name of the blast database",
+                    "description": "Name of the BLAST database",
                     "fa_icon": "fas fa-server"
                 },
                 "blastdb_path": {
                     "type": "string",
                     "default": "/data/referenceDB/blast/microbe_db",
                     "format": "directory-path",
-                    "description": "Path to a blast database",
+                    "description": "Path to a BLAST database",
                     "fa_icon": "fas fa-font"
-                },
-                "kraken_db": {
-                    "type": "string",
-                    "default": "/data/referenceDB/kraken/k2_pluspf_08gb_20230605",
-                    "format": "directory-path",
-                    "description": "Path to a kraken2 database",
-                    "fa_icon": "fas fa-database"
                 }
+                
             }
         }
     },
